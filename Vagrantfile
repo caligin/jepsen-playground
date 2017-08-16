@@ -6,8 +6,8 @@ Vagrant.configure("2") do |config|
     v.cpus = 1
   end
 
-  config.vm.network "private_network", type: "dhcp"
-
+  # use the insecure key as we can't specify one for each box
+  config.ssh.insert_key = false
 
   config.vm.provision "file", source: "deps/consul", destination: "consul"
   config.vm.provision "file", source: "rabbit.repo", destination: "rabbit.repo"
@@ -17,12 +17,15 @@ Vagrant.configure("2") do |config|
   config.vm.provision "shell", inline: "yum install -y rabbitmq-server"
 
   config.vm.define "cluster01" do |cluster|
+    cluster.vm.network "private_network", ip: "172.28.128.11"
   end
 
   config.vm.define "cluster02" do |cluster|
+    cluster.vm.network "private_network", ip: "172.28.128.12"
   end
 
   config.vm.define "cluster03" do |cluster|
+    cluster.vm.network "private_network", ip: "172.28.128.13"
   end
 
 end
