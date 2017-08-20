@@ -1,6 +1,9 @@
+.PHONY: all cluster deps
 
-all: deps
+all: deps cluster
 
+cluster:
+	vagrant up
 
 deps/consul_0.9.0_linux_amd64.zip:
 	wget https://releases.hashicorp.com/consul/0.9.0/consul_0.9.0_linux_amd64.zip -P deps
