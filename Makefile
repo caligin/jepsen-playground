@@ -1,6 +1,9 @@
-.PHONY: all cluster deps
+.PHONY: all cluster deps test
 
 all: deps cluster
+
+test:
+	cd jepsen.consumer/ && lein run test
 
 cluster:
 	vagrant up

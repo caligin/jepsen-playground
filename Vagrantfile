@@ -49,7 +49,7 @@ Vagrant.configure("2") do |config|
     cluster03.vm.network "private_network", ip: "172.28.128.13"
     cluster03.vm.provision "shell", inline: "hostnamectl set-hostname cluster03"
     cluster03.vm.provision "shell", inline: "service rabbitmq-server restart" # in the define as provisioner ordering is outside-in and we need the hostname first...
-    cluster03.vm.provision "shell", inline: "mongo --eval 'rs.status().ok || rs.initiate({_id:\"cluster\",members:[{_id:0,host:\"cluster01\"},{_id:1,host:\"cluster02\"},{_id:2,host:\"cluster03\"}]})'" # this goes on only one node
+    cluster03.vm.provision "shell", inline: "mongo --eval 'rs.status().ok || rs.initiate({_id:\"cluster\",members:[{_id:0,host:\"172.28.128.11\"},{_id:1,host:\"172.28.128.12\"},{_id:2,host:\"172.28.128.13\"}]})'" # this goes on only one node
   end
 
 end
