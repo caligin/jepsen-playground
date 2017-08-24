@@ -6,6 +6,8 @@
             [jepsen.control :as c]
             [jepsen.generator :as gen]
             [jepsen.client :as client]
+            [jepsen.checker :as checker]
+            [knossos.model :as model]
             [langohr.core      :as rmq]
             [langohr.channel   :as lch]
             [langohr.queue     :as lq]
@@ -13,7 +15,8 @@
             [langohr.consumers :as lc]
             [langohr.basic     :as lb]
             [monger.core :as mg]
-            [monger.collection :as mc]))
+            [monger.collection :as mc])
+  (:import knossos.model.Model))
 
 
 ;;;;;;;;;;;;;;;;;;; test target setup
@@ -62,10 +65,10 @@
 (defn make-loads-of-generators []
   (map
     (fn [id] (make-sequence-generator id))
-    (range 1 100)))
+    (range 1 10)))
 
 (def generator (->> (gen/mix (make-loads-of-generators))
-                    (gen/stagger 0.1)
+                    ; (gen/stagger 0.1)
                     (gen/clients)
                     (gen/time-limit 10)))
 
@@ -88,7 +91,27 @@
 
 (defn client-seed [] (client nil nil))
 
+;;;;;;;;;;;;;;;;;;; model
+(def inconsistent model/inconsistent)
 
+(defrecord DemoFsm [values]
+  Model
+  (step [r op]
+    (condp = (:f op)
+      :new  (if (get values (:value op))
+              (inconsistent (str "cannot create key " (:value op) " twice"))
+              (DemoFsm. (assoc values (:value op) :new)))
+      :update  (cond
+                 (= :new (get values (:value op))) (DemoFsm. (assoc values (:value op) :in-progress))
+                 (= :in-progress (get values (:value op))) (DemoFsm. values)
+                 (nil? (get values (:value op))) (inconsistent (str "cannot update uninitialized key " (:value op)))
+                 (= :terminated (get values (:value op))) (inconsistent (str "cannot update terminated key " (:value op)))
+                 :else (inconsistent (str "what does this even mean " (get values (:value op)) " key " (:value op))))
+      :terminate (if (= :in-progress (get values (:value op)))
+                    (DemoFsm. (assoc values (:value op) :terminated))
+                    (inconsistent (str "cannot terminate key " (:value op) " in state " (get values (:value op))))))))
+
+(defn demo-fsm [] (DemoFsm. {}))
 
 ;;;;;;;;;;;;;;;;;;; main setup
 (def keypath (str (java.lang.System/getProperty "user.home") "/.vagrant.d/insecure_private_key"))
@@ -101,6 +124,8 @@
              :strict-host-key-checking false}
       :db (demo-consumer)
       :client (client-seed)
+      :model  (demo-fsm)
+      :checker checker/linearizable
       :generator generator}))
 
 (defn -main [& args]
