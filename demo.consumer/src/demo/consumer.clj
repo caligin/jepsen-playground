@@ -7,7 +7,9 @@
             [langohr.consumers :as lc]
             [langohr.basic     :as lb]
             [monger.core :as mg]
-            [monger.collection :as mc])
+            [monger.collection :as mc]
+            [ring.adapter.jetty :as ring-j]
+            [ring.middleware.file :as ring-file])
   (:import [com.mongodb MongoOptions ServerAddress]))   
 
 
@@ -30,6 +32,17 @@
       (let [[id, command] (clojure.string/split (String. payload "UTF-8") #":")]
         (update-state mongo collection id (or (next-state (load-state mongo collection id) command) :b0rk)))))
 
+(defn id-from-uri [uri]
+  (nth
+    (re-matches #"^/([^/]+)/?$" uri)
+    1))
+
+(defn make-get-resource [mongo collection]
+  (fn [{:keys [uri]}]
+    { :status 200
+      :headers {"Content-Type" "text/plain"}
+      :body (str (load-state mongo collection (id-from-uri uri)))}))
+
 
 (defn -main
   "Consumer"
@@ -47,7 +60,7 @@
     (lq/declare ch qname {:exclusive false :auto-delete true})
     (lq/bind    ch qname xchgname {:routing-key "events.for.*"})
     (lc/subscribe ch qname (make-message-handler mongo collectionname) {:auto-ack true})
-    (Thread/sleep 60000)
+    (ring-j/run-jetty (make-get-resource mongo collectionname) {:port 8888})
     (println "Closing")
     (rmq/close ch)
     (rmq/close conn)
