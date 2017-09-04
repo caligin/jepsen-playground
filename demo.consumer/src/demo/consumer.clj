@@ -16,14 +16,16 @@
 (defn next-state [current-state command]
     ((keyword command)
         ((keyword current-state)
-        {:init {:new :in-progress}
-         :in-progress {:update :in-progress :terminate :terminated}
-         :terminated {}
-        })))
+        {:s1 {:s1to2 :s2
+              :stay :s1}
+         :s2 {:s2to3 :s3
+              :stay :s2}
+         :s3 {:s3to1 :s1
+              :stay :s3}})))
 
 (defn load-state [mongo collection id] (if-let [{:keys [state]} (mc/find-map-by-id mongo collection id)]
     state
-    :init))
+    :s1))
 
 (defn update-state [mongo collection id state] (mc/update mongo collection {:_id id} {:state state} {:upsert true}))
 

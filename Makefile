@@ -1,4 +1,4 @@
-.PHONY: all cluster deps test
+.PHONY: all cluster deps provision test
 
 all: deps cluster
 
@@ -7,6 +7,9 @@ test:
 
 cluster:
 	vagrant up
+
+provision:
+	vagrant provision
 
 deps/consul_0.9.0_linux_amd64.zip:
 	wget https://releases.hashicorp.com/consul/0.9.0/consul_0.9.0_linux_amd64.zip -P deps
