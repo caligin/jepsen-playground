@@ -40,7 +40,7 @@
               logfile
               (c/lit "2>&1")
               (c/lit "&"))
-              (Thread/sleep 3000))
+              (Thread/sleep 5000))
     (teardown! [_ test node]
       (c/exec
         :pkill
@@ -92,7 +92,7 @@
       (let [conn  (rmq/connect {:host node
                                 :username "guest"
                                 :password "guest"})
-            reader (partial http/get (str "http://" node ":8888/1"))]
+            reader (partial http/get (str "http://" node ":80/1"))]
             (client conn (lch/open conn) reader)))
 
     (invoke! [this test op]
