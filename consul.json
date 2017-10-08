@@ -1,0 +1,8 @@
+{
+  "server": true,
+  "bootstrap_expect": 3,
+  "data_dir": "/tmp/consuldata",
+  "bind_addr": "0.0.0.0",
+  "enable_syslog": true,
+  "retry_join": ["172.28.128.11","172.28.128.12","172.28.128.13"]
+}

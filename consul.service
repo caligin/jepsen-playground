@@ -1,0 +1,25 @@
+[Unit]
+Description=consul
+After=network.target
+Documentation=https://www.consul.io/docs
+
+[Service]
+User=consul
+Group=consul
+Environment="OPTIONS=agent -config-dir=/etc/consul.d"
+ExecStart=/usr/bin/consul $OPTIONS
+PermissionsStartOnly=true
+PIDFile=/var/run/consul.pid
+# file size
+LimitFSIZE=infinity
+# cpu time
+LimitCPU=infinity
+# virtual memory size
+LimitAS=infinity
+# open files
+LimitNOFILE=64000
+# processes/threads
+LimitNPROC=64000
+# total threads (user+kernel)
+TasksMax=infinity
+TasksAccounting=false
