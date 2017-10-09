@@ -42,7 +42,7 @@ Vagrant.configure("2") do |config|
   config.vm.provision "shell", inline: "mkdir -p /etc/consul.d"
   config.vm.provision "shell", inline: "cp consul.json /etc/consul.d/conf.json"
   config.vm.provision "shell", inline: "cp consul.service /lib/systemd/system/"
-  config.vm.provision "shell", inline: "cp consul /usr/bin/consul"
+  config.vm.provision "shell", inline: "ls /usr/bin/consul || cp consul /usr/bin/consul"
   config.vm.provision "shell", inline: "useradd -r -s /usr/sbin/nologin consul || true"
   config.vm.provision "shell", inline: "systemctl enable consul.service"
 

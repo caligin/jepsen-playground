@@ -1,4 +1,4 @@
-.PHONY: all cluster deps provision test
+.PHONY: all cluster consumer deps provision test
 
 all: deps cluster
 
@@ -18,7 +18,9 @@ deps/consul: deps/consul_0.9.3_linux_amd64.zip
 	unzip $< -d deps
 	touch $@ # hack b/c extracting the file maintains the original timestamp and counts as ood, there is probably a more elegant solution but who remembers
 
-demo.consumer/target/demo.consumer-0.1.0-SNAPSHOT-standalone.jar:
+consumer: demo.consumer/target/demo.consumer-0.1.0-SNAPSHOT-standalone.jar
+
+demo.consumer/target/demo.consumer-0.1.0-SNAPSHOT-standalone.jar: $(shell find demo.consumer/src/ -type f)
 	cd demo.consumer && lein uberjar
 
 deps: deps/consul demo.consumer/target/demo.consumer-0.1.0-SNAPSHOT-standalone.jar

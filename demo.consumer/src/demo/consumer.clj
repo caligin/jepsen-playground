@@ -9,8 +9,10 @@
             [monger.core :as mg]
             [monger.collection :as mc]
             [ring.adapter.jetty :as ring-j]
-            [ring.middleware.file :as ring-file])
-  (:import [com.mongodb MongoOptions ServerAddress]))   
+            [ring.middleware.file :as ring-file]
+            [clj-http.client :as http]
+            [cheshire.core :as json])
+  (:import [com.mongodb MongoOptions ServerAddress]))
 
 
 (defn next-state [current-state command]
@@ -34,6 +36,41 @@
       (let [[id, command] (clojure.string/split (String. payload "UTF-8") #":")]
         (update-state mongo collection id (or (next-state (load-state mongo collection id) command) :b0rk)))))
 
+(defn create-consul-session []
+  (:ID
+    (json/parse-string
+      (:body
+        (http/put "http://localhost:8500/v1/session/create" {:body "{\"Name\":\"consumer\",\"TTL\":\"10s\"}"}))
+      true)))
+
+(defn start-session-refresher [session]
+  (future
+    (loop []
+      (do
+        (Thread/sleep 3000)
+        (println (str "refreshing session " session))
+        (http/put (str "http://localhost:8500/v1/session/renew/" session))
+        (recur)))))
+
+(defn acquire-lock [session]
+  (=
+    "true"
+    (:body
+      (http/put (str "http://localhost:8500/v1/kv/service/democonsumer/lock?acquire=" session) {:body "ohai dis lock iz mine"}))))
+
+(defn after-locking-on [session suspended-fn]
+  (future
+    (println "starting lock acquisition")
+    (loop [has-lock false]
+      (if has-lock
+        (do
+          (println "lock acquired, proceeding")
+          (suspended-fn))
+        (do
+          (println "lock acquisition failed, retrying in 1000ms")
+          (Thread/sleep 1000)
+          (recur (acquire-lock session)))))))
+
 (defn id-from-uri [uri]
   (nth
     (re-matches #"^/([^/]+)/?$" uri)
@@ -45,7 +82,6 @@
       :headers {"Content-Type" "text/plain"}
       :body (str (load-state mongo collection (id-from-uri uri)))}))
 
-
 (defn -main
   "Consumer"
   [& args]
@@ -56,12 +92,16 @@
         dbname "democonsumer"
         collectionname "entities"
         mconn (mg/connect)
-        mongo   (mg/get-db mconn dbname)]
+        mongo   (mg/get-db mconn dbname)
+        consul-session (create-consul-session)]
     (println (format "Consumer Connected. Channel id: %d" (.getChannelNumber ch)))
     (le/declare ch xchgname "topic" {:durable true})
-    (lq/declare ch qname {:exclusive false :auto-delete true})
+    (lq/declare ch qname {:exclusive false :auto-delete false})
     (lq/bind    ch qname xchgname {:routing-key "events.for.*"})
-    (lc/subscribe ch qname (make-message-handler mongo collectionname) {:auto-ack true})
+    (start-session-refresher consul-session)
+    (after-locking-on
+      consul-session
+      (partial lc/subscribe ch qname (make-message-handler mongo collectionname) {:auto-ack true}))
     (ring-j/run-jetty (make-get-resource mongo collectionname) {:port 8888})
     (println "Closing")
     (rmq/close ch)

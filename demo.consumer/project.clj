@@ -5,4 +5,6 @@
                  [com.novemberain/langohr "3.6.1"]
                  [com.novemberain/monger "3.1.0"]
                  [ring/ring-core "1.6.2"]
-                 [ring/ring-jetty-adapter "1.6.2"]])
+                 [ring/ring-jetty-adapter "1.6.2"]
+                 [clj-http "3.7.0"]
+                 [cheshire "5.8.0"]])
