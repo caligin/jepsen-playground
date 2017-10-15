@@ -12,7 +12,7 @@
             [ring.middleware.file :as ring-file]
             [clj-http.client :as http]
             [cheshire.core :as json])
-  (:import [com.mongodb MongoOptions ServerAddress]))
+  (:import [com.mongodb MongoOptions ServerAddress WriteConcern]))
 
 
 (defn next-state [current-state command]
@@ -94,7 +94,9 @@
         mconn (mg/connect)
         mongo   (mg/get-db mconn dbname)
         consul-session (create-consul-session)]
+    (mg/set-default-write-concern! WriteConcern/JOURNALED)
     (println (format "Consumer Connected. Channel id: %d" (.getChannelNumber ch)))
+    (lb/qos ch 1)
     (le/declare ch xchgname "topic" {:durable true})
     (lq/declare ch qname {:exclusive false :auto-delete false})
     (lq/bind    ch qname xchgname {:routing-key "events.for.*"})

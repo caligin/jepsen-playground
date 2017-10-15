@@ -8,6 +8,7 @@
             [jepsen.client :as client]
             [jepsen.checker :as checker]
             [knossos.model :as model]
+            [knossos.op :as op]
             [langohr.core      :as rmq]
             [langohr.channel   :as lch]
             [langohr.queue     :as lq]
@@ -40,7 +41,7 @@
               logfile
               (c/lit "2>&1")
               (c/lit "&"))
-              (Thread/sleep 5000))
+              (Thread/sleep 10000))
     (teardown! [_ test node]
       (c/exec
         :pkill
@@ -109,16 +110,14 @@
 
 (defn client-seed [] (client nil nil nil))
 
-;;;;;;;;;;;;;;;;;;; model
+;;;;;;;;;;;;;;;;;;; model & checker
 (def inconsistent model/inconsistent)
 
 (defrecord FSMRegister [value]
   Model
   (step [r op]
     (condp = (:f op)
-      :write (if-let [next-state (apply-fsm fsm value (:value op))]
-               (FSMRegister. next-state)
-               (inconsistent (str "invalid write detected, trying to apply transition " (:value op) "on top of state " value)))
+      :write r
       :read  (if (= :b0rk (:value op))
                 (inconsistent "b0rk detected")
                 r)))
@@ -127,6 +126,24 @@
 
 (defn fsm-register
   ([] (FSMRegister. :s1)))
+
+(defn legal-transitions []
+  (reify checker/Checker
+    (check [this test model history opts]
+      (let [endstate (reduce
+                        model/step
+                        model
+                        (filter
+                          (fn [op]
+                            (or
+                              (and (= :write (:f op)) (op/invoke? op))
+                              (and (= :read (:f op)) (op/ok? op))))
+                          history))]
+      (if (model/inconsistent? endstate)
+          {:valid? false
+           :error (:msg endstate)}
+          {:valid? true})))))
+
 
 ;;;;;;;;;;;;;;;;;;; main setup
 (def keypath (str (java.lang.System/getProperty "user.home") "/.vagrant.d/insecure_private_key"))
@@ -140,7 +157,7 @@
       :db (demo-consumer)
       :client (client-seed)
       :model  (fsm-register)
-      :checker checker/linearizable
+      :checker (legal-transitions)
       :generator generator}))
 
 (defn -main [& args]
