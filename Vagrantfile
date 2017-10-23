@@ -45,6 +45,7 @@ Vagrant.configure("2") do |config|
   config.vm.provision "shell", inline: "ls /usr/bin/consul || cp consul /usr/bin/consul"
   config.vm.provision "shell", inline: "useradd -r -s /usr/sbin/nologin consul || true"
   config.vm.provision "shell", inline: "systemctl enable consul.service"
+  config.vm.provision "shell", inline: "systemctl start consul.service"
 
   config.vm.define "cluster01" do |cluster01|
     cluster01.vm.network "private_network", ip: "172.28.128.11"

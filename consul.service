@@ -23,3 +23,7 @@ LimitNPROC=64000
 # total threads (user+kernel)
 TasksMax=infinity
 TasksAccounting=false
+
+[Install]
+WantedBy=multi-user.target
+
