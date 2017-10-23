@@ -1,0 +1,24 @@
+[Unit]
+Description=nomad.service
+After=network.target
+Requires=consul.service
+Documentation=https://www.nomadproject.io/docs/
+
+[Service]
+User=root
+Group=root
+Environment="OPTIONS=agent -config /etc/nomad.hcl"
+ExecStart=/usr/bin/nomad $OPTIONS
+PermissionsStartOnly=true
+PIDFile=/var/run/nomad.pid
+LimitFSIZE=infinity
+LimitCPU=infinity
+LimitAS=infinity
+LimitNOFILE=64000
+LimitNPROC=64000
+TasksMax=infinity
+TasksAccounting=false
+
+[Install]
+WantedBy=multi-user.target
+
